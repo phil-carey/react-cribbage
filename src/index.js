@@ -142,30 +142,31 @@ class Board extends React.Component {
 
   render() {
     const winner = gp.calculateWinner(this.state);
-    let status, myScore, oppoScore, netTotal
+    let instructions, myScore, oppoScore, currentTotal
+    var status = 'this is what happened last...'
     if (winner) {
-      status = 'Winner: ' + winner
+      instructions = 'Winner: ' + winner
     } else {
-      status = gp.getInstruction( gp.getPlayPhase(false) )
+      instructions = gp.getInstruction( gp.getPlayPhase(false) )
       console.log( "instruction = %s phase=%s", status, gp.getPlayPhase(false) )
       myScore = gp.myScore()
       oppoScore = gp.oppoScore()
-      netTotal = gp.netTotal()
+      currentTotal = gp.currentTotal(this.state['gameHand'])
     }
     return (
       <div onClick={() =>this.handleGameClick()}>
         <div className="card-row">
           <div className="status">
-            {status}
+            {instructions}
           </div>
           <div className="status">
-            what happened last...
+            {status}
           </div>
         </div>
 
         <div className="card-row">
-          <div className="oppoStatus">
-            Total : {netTotal}
+          <div className="totalStatus">
+            Total : {currentTotal}
           </div>
           <div className="mystatus">
             You : {myScore}

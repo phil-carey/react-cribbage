@@ -1,7 +1,6 @@
 // the internal game is stateful, we mutate directly, though we follow react non-mutation conventions wrt UI updates
 var gameState = {
   moveNdx : 0,
-  runningTotal : 0,
 }
 
 function clone(obj) {
@@ -87,14 +86,21 @@ exports.copyCard = function( srcCard, destHand ){
   return changedHand
 }
 
-function cardPoints( card ){
-    var rank = card.slice(0,1)
-    var ranks = "A23456789TJQK"
-    return ranks.indexOf( rank )+ 1
-}
+exports.currentTotal = function( gameHand ){
+  var values = getValues( gameHand.slice(1, gameHand.length) )
+  var ranks = getRanks( values )
+  var simplified = simplifyRanks( ranks )
+  var result = 0
 
-exports.netTotal = function(){
-  return gameState.runningTotal % 31
+  for( var i = 0; i < simplified.length; i++){
+    if( result + simplified[i]  > 31 ) {
+      result = simplified[i]
+    }else{
+      result += simplified[i]
+    }
+  }
+  console.log( "currentTotal=%d", result )
+  return result
 }
 
 exports.playCard = function( whoseHand, cardNdx ){
@@ -106,7 +112,6 @@ exports.playCard = function( whoseHand, cardNdx ){
   changedHand[cardNdx] = changedCard
 
   gameState.moveNdx++
-  gameState.runningTotal += cardPoints( whoseHand[cardNdx].value )
 
   return changedHand
 }
@@ -614,7 +619,6 @@ exports.newGame = function(){
   gameState.moveNdx = 0
   gameState.oppoScore = 0
   gameState.myScore = 0
-  gameState.runningTotal = 0
 
   return {
     oppoHand: oppoHand,
