@@ -92,7 +92,7 @@ exports.currentTotal = function( gameHand ){
   var simplified = simplifyRanks( ranks )
   var result = 0
 
-  for( var i = 0; i < simplified.length; i++){
+  for( var i = 0; i < simplified.length; i++){ 
     if( result + simplified[i]  > 31 ) {
       result = simplified[i]
     }else{
