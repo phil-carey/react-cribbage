@@ -20,7 +20,7 @@ ol, ul {
   margin-right: 0px;
   margin-left: 0px;
   margin-top: 0px;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
   display:block;
   height: 20px;
   width: 400px;
@@ -103,11 +103,12 @@ ol, ul {
 }
 
 .game-info {
-  margin-left: 20px;
+  margin-left: 10px;
 }
 
 .card-row{
   margin:0px;
   padding:0px;
+  margin-bottom: 14px;
   position: 'relative';
 }

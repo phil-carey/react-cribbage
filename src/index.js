@@ -2,7 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-const gp = require('./gameplay.js');
+var GamePlay = require('./gameplay.js').default;
+
+var game = new GamePlay();
 
 function Card(props) {
   return (
@@ -29,26 +31,227 @@ class Game extends React.Component {
 class Board extends React.Component {
   constructor(props) {
     super(props);
-    this.state = gp.newGame()
+    this.state = game.newGame()
+  }
+
+  handleCardClick(whoseHand, cardNdx){
+    var changedHand;
+
+    switch( game.getPhase() ){
+      case 'unstarted':
+      case 'discarding':
+      switch( whoseHand ){
+        case 'yourHand':
+        changedHand = game.discardCard( this.state[whoseHand], cardNdx )
+        game.advancePlay()
+
+        this.setState({ yourHand : changedHand })
+
+        if( game.getPhase() === 'playing' ){
+          changedHand = game.opponentDiscards( this.state['oppoHand'] )
+          this.setState({ oppoHand : changedHand })
+
+          changedHand = game.flipCard( this.state['gameHand'], 0 )
+          this.setState({ gameHand : changedHand })
+        }
+        break
+        
+        default:
+        break
+        }
+      break
+
+      case 'playing':
+      switch( whoseHand ){
+        case 'yourHand':
+        // TODO: support opponent moving first
+        // in game play
+        // copy the chosen card to the gamehand in the next open position
+        // show the played card in the gameHand
+        var gameHand = this.state['gameHand']
+        var oppoHand = this.state['oppoHand']
+        var yourHand = this.state['yourHand']
+
+        game.copyCard( yourHand[cardNdx], gameHand )
+
+        // mark copied card as played to make it hide when it renders
+        game.playCard( yourHand, cardNdx )
+        game.advancePlay()
+
+        // have your opponent make their play
+        var oppoNdx = game.opponentChoosesCardToPlay( gameHand, oppoHand )
+        game.copyCard( oppoHand[oppoNdx], gameHand )
+        game.flipCard( gameHand, game.getLastPlayedIndex( gameHand )  )
+
+        // mark copied card as played to make it hide when it renders
+        game.playCard( oppoHand, oppoNdx )
+        game.advancePlay()
+
+        this.setState({ gameHand : gameHand })
+        this.setState({ oppoHand : oppoHand })
+        this.setState({ yourHand : yourHand })
+        break;
+
+        case 'gameHand':
+        if( cardNdx === 0 ){
+          this.setState( game.newGame() )
+        }
+        break;
+
+        case 'oppoHand':
+        //this.setState({ yourHand : changedHand })
+        break;
+
+        default:
+        console.log("unhandled case")
+        break
+      }
+      break
+
+      default:
+      break
+    }
+  }
+
+  handleGameClick(){
+    var changedHand, score
+
+    // TODO: manage actions/changes in game state due do current phase of play
+    switch( game.getPhase() ){
+      case 'gamePlayComplete':
+      game.advancePlay()
+      break
+
+      case 'scoreDealerHand':
+      changedHand = game.showHand( this.state['yourHand'] )
+      this.setState({ yourHand : changedHand })
+
+      score = game.scorePlayHand( changedHand, this.state['gameHand'][0] )
+      //console.log( "scoreDealerHand score = %d", score.points )
+
+      game.setHandScore( 'yourHand', score )
+      game.advancePlay()
+      break
+
+      case 'scoreNonDealerHand':
+      // clear the gamehand
+      changedHand = game.clearHand( this.state['gameHand'], 1 )
+      this.setState({ gameHand : changedHand })
+
+      // show the non-dealer hand
+      changedHand = game.showHand( this.state['oppoHand'] )
+      this.setState({ oppoHand : changedHand })
+
+      // score the non-dealer hand
+      score = game.scorePlayHand( changedHand, this.state['gameHand'][0] )
+      //console.log( "scoreNonDealerHand score ", score )
+
+      game.setHandScore( 'oppoHand', score )
+      game.advancePlay()
+      break
+
+      case 'scoreCribHand':
+      // all cards have been played, calculate score for the crib hand
+      // copy all discarded cards to the gamehand and show it
+      changedHand = game.copyDiscardsToGameHand( this.state['oppoHand'], this.state['yourHand'], this.state['gameHand'] )
+      this.setState({ gameHand : changedHand })
+      game.advancePlay()
+      break
+
+      case 'handCompleted':
+      if( this.state['gameHand'][0].faceup === true ){
+        this.setState( game.newGame() )
+      }
+      break
+
+      default:
+      // do nothing
+      break
+    }
+  }
+
+  render() {
+    const winner = game.calculateWinner(this.state);
+    let instructions, currentTotal, yourPoints = 0, oppoPoints = 0
+    var status = 'this is what happened last...'
+    if (winner) {
+      instructions = 'Winner: ' + winner
+    } else {
+      var phase = game.getPhase()
+      instructions = game.getInstruction( phase )
+      if( phase === ""){
+        //score = game.scoreHand( changedHand, this.state['gameHand'][0] )
+      }
+      //console.log( "render instruction = %s phase=%s", status, phase )
+
+      currentTotal = game.currentTotal(this.state['gameHand'])
+    }
+    oppoPoints = game.getHandPoints( 'oppoHand')
+    yourPoints = game.getHandPoints( 'yourHand')
+
+    return (
+      <div onClick={() =>this.handleGameClick()}>
+        <div className="card-row">
+          <div className="status">
+            {instructions}
+          </div>
+        </div>
+        <hr/>
+
+        <div className="card-row">
+          <div className="totalStatus">
+            Total : {currentTotal}
+          </div>
+          <div className="mystatus">
+            You : {yourPoints}
+          </div>
+          <div className="oppoStatus">
+            Opponent : {oppoPoints}
+          </div>
+        </div>
+        <hr/>
+
+        <div className="card-row">
+          {this.renderCard( 'oppoHand',0 )}
+          {this.renderCard( 'oppoHand',1 )}
+          {this.renderCard( 'oppoHand',2 )}
+          {this.renderCard( 'oppoHand',3 )}
+          {this.renderCard( 'oppoHand',4 )}
+          {this.renderCard( 'oppoHand',5 )}
+        </div>
+
+        <div className="card-row">
+          {this.renderCard( 'gameHand',0 )}
+          {this.renderCard( 'gameHand',1 )}
+          {this.renderCard( 'gameHand',2 )}
+          {this.renderCard( 'gameHand',3 )}
+          {this.renderCard( 'gameHand',4 )}
+          {this.renderCard( 'gameHand',5 )}
+          {this.renderCard( 'gameHand',6 )}
+          {this.renderCard( 'gameHand',7 )}
+          {this.renderCard( 'gameHand',8 )}
+        </div>
+
+        <div className="card-row">
+          {this.renderCard( 'yourHand',0 )}
+          {this.renderCard( 'yourHand',1 )}
+          {this.renderCard( 'yourHand',2 )}
+          {this.renderCard( 'yourHand',3 )}
+          {this.renderCard( 'yourHand',4 )}
+          {this.renderCard( 'yourHand',5 )}
+        </div>
+
+        <hr />
+
+        <div className="status">
+          {status}
+        </div>
+      </div>
+    );
   }
 
   renderCard( whoseHand, cardNdx ){
-    /*
-    background: #fff;
-    border: 1px solid #999;
-    float: left;
-    font-size: 24px;
-    font-weight: bold;
-    line-height: 34px;
-    height: 34px;
-    margin-right: -1px;
-    margin-top: -1px;
-    padding: 0;
-    text-align: center;
-    width: 34px;
-
-    */
-    // left is position within the div, width is width of the div
+    // marginLeft is position within the div, width is width of the div
     var card;
     var offsets;
     var width;
@@ -57,7 +260,6 @@ class Board extends React.Component {
     var marginBottom;
     var height = 156
     var visibility = 'inherit'
-
 
     if( this.state[whoseHand][cardNdx].faceup === false ){
       card = 'BB'
@@ -70,6 +272,9 @@ class Board extends React.Component {
       card = 'BB'
     }
 
+    offsets = game.calculateCardoffsets( card )
+    var bg = "url( 'card-deck.png') " + offsets.left + "px " + offsets.top +"px"
+
     switch( whoseHand ){
       case 'gameHand':
       marginLeft = (cardNdx === 1) ? 50 : -1
@@ -77,46 +282,31 @@ class Board extends React.Component {
       marginBottom = 0
 
       if ( cardNdx === 0){
+        // cut card
         width = 100
       }else{
-        width = (cardNdx === gp.getLastPlayedIndex( this.state[whoseHand] ) ) ? 100 : 65;
+        // partial cards for all that overlap ( all but the last one )
+        width = (cardNdx === game.getLastPlayedIndex( this.state[whoseHand] ) ) ? 100 : 65;
       }
       if( card ==='BB' && cardNdx > 0){
         visibility = 'hidden'
       }
       break;
 
-      case 'yourHand':
-      width = (cardNdx === gp.getLastUnplayedIndex( this.state[whoseHand] ) ) ? 100 : 65;
-      marginLeft = (cardNdx === 0) ? 50 : -1
-      marginTop = 20
-      marginBottom = 0
-      if( this.state[whoseHand][cardNdx].played === true ){
-        width = 0
-        visibility = 'hidden'
-      }
-      break;
-
       case 'oppoHand':
-      width = (cardNdx === gp.getLastUnplayedIndex( this.state[whoseHand] ) ) ? 100 : 65;
+      case 'yourHand':
+      width = (cardNdx === game.getLastUnplayedIndex( this.state[whoseHand] ) ) ? 100 : 65;
+      marginLeft = (cardNdx === 0) ? 50 : -1
       if( this.state[whoseHand][cardNdx].played === true ){
         width = 0
         visibility = 'hidden'
       }
-      marginLeft = (cardNdx === 0) ? 50 : -1
-      marginTop = 20
-      marginBottom = 20
       break;
 
       default:
-      width = 100;
-      marginLeft = -1;
-      marginTop = 0
       break;
     }
 
-    offsets = gp.calculateCardoffsets( card )
-    var bg = "url( 'card-deck.png') " + offsets.left + "px " + offsets.top +"px"
     var styles = {
       card: {
         float:'left',
@@ -139,208 +329,7 @@ class Board extends React.Component {
       onClick={() => this.handleCardClick(whoseHand, cardNdx)}
     />
   }
-
-  render() {
-    const winner = gp.calculateWinner(this.state);
-    let instructions, myScore, oppoScore, currentTotal
-    var status = 'this is what happened last...'
-    if (winner) {
-      instructions = 'Winner: ' + winner
-    } else {
-      instructions = gp.getInstruction( gp.getPlayPhase(false) )
-      console.log( "instruction = %s phase=%s", status, gp.getPlayPhase(false) )
-      myScore = gp.myScore()
-      oppoScore = gp.oppoScore()
-      currentTotal = gp.currentTotal(this.state['gameHand'])
-    }
-    return (
-      <div onClick={() =>this.handleGameClick()}>
-        <div className="card-row">
-          <div className="status">
-            {instructions}
-          </div>
-          <div className="status">
-            {status}
-          </div>
-        </div>
-
-        <div className="card-row">
-          <div className="totalStatus">
-            Total : {currentTotal}
-          </div>
-          <div className="mystatus">
-            You : {myScore}
-          </div>
-          <div className="oppoStatus">
-            Opponent : {oppoScore}
-          </div>
-        </div>
-
-        <div className="card-row">
-          {this.renderCard( 'oppoHand',0 )}
-          {this.renderCard( 'oppoHand',1 )}
-          {this.renderCard( 'oppoHand',2 )}
-          {this.renderCard( 'oppoHand',3 )}
-          {this.renderCard( 'oppoHand',4 )}
-          {this.renderCard( 'oppoHand',5 )}
-        </div>
-
-        <div className="card-row">
-          {this.renderCard( 'gameHand',0 )}
-          {this.renderCard( 'gameHand',1 )}
-          {this.renderCard( 'gameHand',2 )}
-          {this.renderCard( 'gameHand',3 )}
-          {this.renderCard( 'gameHand',4 )}
-          {this.renderCard( 'gameHand',5 )}
-          {this.renderCard( 'gameHand',6 )}
-          {this.renderCard( 'gameHand',7 )}
-          {this.renderCard( 'gameHand',8 )}
-          {this.renderCard( 'gameHand',9 )}
-          {this.renderCard( 'gameHand',10 )}
-          {this.renderCard( 'gameHand',11 )}
-          {this.renderCard( 'gameHand',12 )}
-        </div>
-
-        <div className="card-row">
-          {this.renderCard( 'yourHand',0 )}
-          {this.renderCard( 'yourHand',1 )}
-          {this.renderCard( 'yourHand',2 )}
-          {this.renderCard( 'yourHand',3 )}
-          {this.renderCard( 'yourHand',4 )}
-          {this.renderCard( 'yourHand',5 )}
-        </div>
-      </div>
-    );
-  }
-
-  handleGameClick(){
-    var phase = gp.getPlayPhase(true), changedHand, score
-    console.log( "handleGameClick phase = %s", phase)
-    // TODO: manage actions/changes in game state due do current phase of play
-    switch( phase ){
-      case 'scoreDealerHand':
-      // all cards have been played, calculate score for the hand which is not the dealer ( they count first )
-      // clear the gamehand
-      changedHand = gp.clearHand( this.state['gameHand'], 1 )
-      this.setState({ gameHand : changedHand })
-
-      changedHand = gp.showHand( this.state['yourHand'] )
-      this.setState({ yourHand : changedHand })
-
-      score = gp.scoreHand( this.state['gameHand'][0], changedHand )
-      console.log( "scoreDealerHand score = %d", score.points )
-      break
-
-      case 'scoreNonDealerHand':
-      // all cards have been played, calculate score for the hand which is the dealer
-      // reshow the dealer cards which have been played, but not discarded
-      changedHand = gp.showHand( this.state['oppoHand'] )
-      this.setState({ oppoHand : changedHand })
-      score = gp.scoreHand( this.state['gameHand'][0], changedHand )
-      console.log( "scoreNonDealerHand score = %d", score.points )
-      break
-
-      case 'scoreCribHand':
-      // all cards have been played, calculate score for the crib hand
-      // copy all discarded cards to the gamehand and show it
-      changedHand = gp.copyDiscardsToGameHand( this.state['oppoHand'], this.state['yourHand'], this.state['gameHand'] )
-      this.setState({ gameHand : changedHand })
-      break
-
-      case 'handCompleted':
-      if( this.state['gameHand'][0].faceup === true ){
-        console.log( "starting new game")
-        this.setState( gp.newGame() )
-      }
-      break
-
-      default:
-      // do nothing
-      break
-    }
-  }
-
-  handleCardClick(whoseHand, cardNdx){
-    // NOTE: since we are supposed to not mutate state directly when using react, and since objects are by reference
-    // and since they are in our state array, and since react can't detect a direct change except via the this.state syntax
-    // we need to clone the inner object then change it, then assign it to a copy of the hand we modified if we want to
-    // follow react conventions
-    var phase = gp.getPlayPhase(false)
-    var changedHand;
-    switch(phase){
-      case 'unstarted':
-      case 'discarding':
-      case 'playing':
-      switch( whoseHand ){
-        case 'oppoHand':
-        //this.setState({ yourHand : changedHand })
-        break;
-
-        case 'yourHand':
-        // if it's one of the first two cards, they are contibutions to the crib
-        // after the second card is discarded, your opponent discards two, then the cut happens
-        if( gp.getMoveNdx() < 2 ){
-          changedHand = gp.discardCard( this.state[whoseHand], cardNdx )
-          this.setState({ yourHand : changedHand })
-
-          if( gp.getMoveNdx() === 2 ){
-            // have yourHand make it's discards, note off by 1 since state has not been updated yet...
-            changedHand = gp.opponentDiscards( this.state['oppoHand'] )
-            this.setState({ oppoHand : changedHand })
-
-            // flip the cut card automatically
-            changedHand = gp.flipCard( this.state['gameHand'], 0 )
-            this.setState({ gameHand : changedHand })
-          }
-        }else{
-          // TODO: support opponent moving first
-          // in game play
-          // copy the chosen card to the gamehand in the next open position
-          // show the played card in the gameHand
-          var gameHand = this.state['gameHand']
-          var oppoHand = this.state['oppoHand']
-          var yourHand = this.state['yourHand']
-
-          gameHand = gp.copyCard( yourHand[cardNdx], gameHand )
-
-          // mark copied card as played to make it hide when it renders
-          yourHand = gp.playCard( yourHand, cardNdx )
-
-          // have your opponent make their play
-          var oppoNdx = gp.opponentChoosesCardToPlay( gameHand, oppoHand )
-          gameHand = gp.copyCard( oppoHand[oppoNdx], gameHand )
-          var lastPlayedNdx = gp.getLastPlayedIndex( gameHand )
-          gameHand = gp.flipCard( gameHand, lastPlayedNdx )
-
-          // mark copied card as played to make it hide when it renders
-          oppoHand = gp.playCard( oppoHand, oppoNdx )
-
-          this.setState({ gameHand : gameHand })
-          this.setState({ oppoHand : oppoHand })
-          this.setState({ yourHand : yourHand })
-        }
-
-        break;
-
-        case 'gameHand':
-        if( cardNdx === 0 ){
-          console.log( "starting new game")
-          this.setState( gp.newGame() )
-        }
-        break;
-
-        default:
-        console.log("unhandled case")
-        break
-      }
-      break
-
-      default:
-      break
-    }
-  }
 }
-
 
 // ========================================
 
