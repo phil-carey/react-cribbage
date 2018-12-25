@@ -59,7 +59,10 @@ class Board extends React.Component {
           default:
             break
         }
-        break
+      break
+
+      case 'scoreCribHand':
+      break
 
       case 'playing':
         switch (whoseHand) {
