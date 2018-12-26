@@ -13,7 +13,7 @@ export default class GamePlay {
     var i
     var cribHand = []
     for (i = 0; i < 4; i++) {
-      cribHand[i] = this.dealCard('BB', false, false)
+      cribHand[i] = utils.dealCard('BB', false, false)
     }
 
     for (i = 0; i < handA.length; i++) {
@@ -25,7 +25,8 @@ export default class GamePlay {
       }
     }
     cribHand.sort(utils.compareCards)
-    return this.scoreHand(cribHand, cutCard)
+    var result = utils.scoreHand(cribHand, cutCard)
+    return result
   }
 
   scorePlayHand(hand, cutCard) {
@@ -49,41 +50,13 @@ export default class GamePlay {
     return this.state[whichHand].score.points
   }
 
-  getInstruction(phase) {
-    var instruction
-    switch (phase) {
-      case 'gamePlayComplete':
-        instruction = 'Game play comlplete'
-        break
+  setHandPoints(whichHand, points) {
+    // TODO: returns the total of cutPoints+playPoints+handScore.points
+    this.state[whichHand].score.points = points
+  }
 
-      case 'scoreNonDealerHand':
-        instruction = 'Click to score the non dealer hand'
-        break
-
-      case 'scoreDealerHand':
-        instruction = 'Click to score the dealer hand'
-        break
-
-      case 'scoreCribHand':
-        instruction = 'Click to score score the crib'
-        break
-
-      case 'handCompleted':
-        instruction = 'Click to start a new hand'
-        break
-
-      case 'playing':
-        instruction = 'Click a card to play it'
-        break
-
-      case 'discarding':
-      case 'unstarted':
-      default:
-        instruction = 'Select 2 for the crib'
-        break
-    }
-    //console.log( "getInstruction  this.state.moveNdx=%d phase=%s",  this.state.moveNdx, phase )
-    return instruction
+  getWhatHappenedLast() {
+    return this.whatHappenedLast
   }
 
   advancePlay() {
@@ -110,16 +83,28 @@ export default class GamePlay {
     return lastNdx
   }
 
+  getFirstUnplayedIndex(hand) {
+    var firstNdx = hand.length - 1
+    for (var i = 0; i < hand.length; i++) {
+      if (hand[i].played === false) {
+        firstNdx = i
+        break
+      }
+    }
+    return firstNdx
+  }
+
   copyCard(srcCard, destHand) {
     // copy the provided card to the first unplayed spot in the desthand
     var changedCard
     changedCard = utils.clone(srcCard)
     changedCard.played = true
 
-    var freeNdx = utils.getFirstUnplayedIndex(destHand)
+    var freeNdx = this.getFirstUnplayedIndex(destHand)
 
     destHand[freeNdx] = changedCard
   }
+
   currentTotal(gameHand) {
     var values = utils.getValues(gameHand.slice(1, gameHand.length))
     var ranks = utils.getRanks(values)
@@ -143,10 +128,12 @@ export default class GamePlay {
 
   opponentDiscards(hand) {
     // TODO: add intelligent discarding for opponent
-    this.discardCard(hand, 0)
-    this.advancePlay()
-    this.discardCard(hand, 1)
-    this.advancePlay()
+    for (var i = 0; i < hand.length; i++) {
+      if (hand[i].discarded === false) {
+        this.discardCard(hand, i)
+        break
+      }
+    }
     return hand
   }
 
@@ -193,8 +180,8 @@ export default class GamePlay {
         break
 
       case 1:
-        //case 2:
-        //case 3:
+      case 2:
+      case 3:
         phase = 'discarding'
         break
 
@@ -225,6 +212,51 @@ export default class GamePlay {
         break
     }
     return phase
+  }
+
+  getInstruction(phase) {
+    var instruction
+    switch (phase) {
+      case 'gamePlayComplete':
+        instruction = 'Game play comlplete'
+        break
+
+      case 'scoreNonDealerHand':
+        if (this.itsYourCrib() === false ) {
+          instruction = 'Click to score your hand'
+        } else {
+          instruction = 'Click to score your opponents hand'
+        }
+        break
+
+      case 'scoreDealerHand':
+        if (this.itsYourCrib() === false) {
+          instruction = 'Click to score your opponents hand'
+        } else {
+          instruction = 'Click to score your hand'
+        }
+        break
+
+      case 'scoreCribHand':
+        instruction = 'Click to score score the crib'
+        break
+
+      case 'handCompleted':
+        instruction = 'Click to start a new hand'
+        break
+
+      case 'playing':
+        instruction = 'Click a card to play it'
+        break
+
+      case 'unstarted':
+      case 'discarding':
+      default:
+        instruction = this.state.yourDeal ? 'Discard 2 into your crib...' : 'Discard 2 into your opponents crib...'
+        break
+    }
+    //console.log( "getInstruction  this.state.moveNdx=%d phase=%s",  this.state.moveNdx, phase )
+    return instruction
   }
 
   clearHand(hand, startFrom) {
@@ -303,6 +335,10 @@ export default class GamePlay {
     return result
   }
 
+  itsYourCrib() {
+    return this.state.yourDeal
+  }
+
   newGame() {
     var deck = utils.createDeck(), i
     var oppoHand = utils.dealHand(deck, false, 0)
@@ -331,6 +367,9 @@ export default class GamePlay {
     this.state.moveNdx = 0
     this.state.yourHand = utils.createHand(utils.getValues(yourHand))
     this.state.oppoHand = utils.createHand(utils.getValues(oppoHand))
+    // Math.random gives 0.0 <= n < 1.0
+    this.state.yourDeal = (Math.random() + 0.5) >= 1 ? true : false
+    this.whatHappenedLast = this.state.yourDeal ? "It's your crib..." : "It's your opponents crib..."
 
     return {
       oppoHand: oppoHand,

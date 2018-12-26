@@ -267,17 +267,6 @@ export default class CardUtils {
     }
   }
 
-  getFirstUnplayedIndex(hand) {
-    var firstNdx = hand.length - 1
-    for (var i = 0; i < hand.length; i++) {
-      if (hand[i].played === false) {
-        firstNdx = i
-        break
-      }
-    }
-    return firstNdx
-  }
-
   // These are not really just card utilities, they are general purpose
   clone(obj) {
     var copy;
@@ -320,3 +309,4 @@ export default class CardUtils {
     return a
   }
 }
+
