@@ -267,8 +267,10 @@ export default class GamePlay {
   }
 
   showHand(hand) {
-    for (var i = 1; i < hand.length; i++) {
-      hand[i].played = !(hand[i].played && !hand[i].discarded)
+    for (var i = 0; i < hand.length; i++) {
+      if( hand[i].discarded === false ){
+        hand[i].played = false
+      }
     }
     return hand
   }

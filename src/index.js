@@ -39,8 +39,10 @@ class Board extends React.Component {
     var gameHand = this.state['gameHand']
     var oppoHand = this.state['oppoHand']
     var yourHand = this.state['yourHand']
+    var phase =  game.getPhase()
+    //console.log( "HCC phase = %s", phase )
 
-    switch (game.getPhase()) {
+    switch (phase) {
       case 'unstarted':
       case 'discarding':
         switch (whoseHand) {
@@ -131,6 +133,7 @@ class Board extends React.Component {
     //cribScore = game.scoreCribHand(this.state['yourHand'], this.state['oppoHand'], this.state['gameHand'][0])
 
     var phase = game.getPhase()
+    //console.log( "HGC phase = %s", phase )
     switch (phase) {
       case 'gamePlayComplete':
         game.advancePlay()
