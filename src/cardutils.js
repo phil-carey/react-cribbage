@@ -2,36 +2,39 @@ export default class CardUtils {
 
   createDeck() {
     // construct and return a shuffled deck
-    var suits = "CDHS"
-    var ranks = "A23456789TJQK"
-    var deck = [], i = 0
-    for (var row = 0; row < 4; row++) {
-      var suit = suits.slice(row, row + 1)
-      for (var col = 0; col < 13; col++) {
-        var rank = ranks.slice(col, col + 1)
-        deck[i++] = rank + suit
+    let suits = "CDHS"
+    let ranks = "A23456789TJQK"
+    let cards = [], i = 0
+    for (let row = 0; row < 4; row++) {
+      let suit = suits.slice(row, row + 1)
+      for (let col = 0; col < 13; col++) {
+        let rank = ranks.slice(col, col + 1)
+        cards[i++] = rank + suit
       }
     }
-
-    return this.shuffle(deck)
+    return { 
+      nextNdx : 0,
+      cards : this.shuffle(cards)
+    }
   }
 
-  dealCard(value, faceup, played) {
+  createCard(value, faceup, played) {
     return { value: value, faceup: faceup, played: played, discarded: false }
   }
 
-  dealHand(deck, faceup, from) {
-    var hand = []
-    for (var i = 0; i < 6; i++) {
-      hand[i] = this.dealCard(deck[from + i], faceup, false)
+  dealHand(deck, faceup, howMany) {
+    let hand = []
+    for (let i = 0; i < howMany; i++) {
+      hand[i] = this.createCard(deck.cards[ deck.nextNdx + i ], faceup, false)
     }
+    deck.nextNdx += howMany
     return hand
   }
 
   compareCards(a, b) {
-    var order = "A23456789TJQKB"
-    var apos = order.indexOf(a.value.slice(0, 1))
-    var bpos = order.indexOf(b.value.slice(0, 1))
+    let order = "A23456789TJQKB"
+    let apos = order.indexOf(a.value.slice(0, 1))
+    let bpos = order.indexOf(b.value.slice(0, 1))
 
     if (apos < bpos) return -1
     if (apos > bpos) return 1
@@ -46,9 +49,9 @@ export default class CardUtils {
   }
 
   compareCardValues(a, b) {
-    var order = "A23456789TJQKB"
-    var apos = order.indexOf(a.slice(0, 1))
-    var bpos = order.indexOf(b.slice(0, 1))
+    let order = "A23456789TJQKB"
+    let apos = order.indexOf(a.slice(0, 1))
+    let bpos = order.indexOf(b.slice(0, 1))
 
     if (apos < bpos) return -1
     if (apos > bpos) return 1
@@ -84,14 +87,14 @@ export default class CardUtils {
   }
 
   getRank(value) {
-    var order = "BA23456789TJQK"
+    let order = "BA23456789TJQK"
     return order.indexOf(value.slice(0, 1))
   }
 
   getRanks(values) {
-    var ranks = []
+    let ranks = []
 
-    for (var j = 0; j < values.length; j++) {
+    for (let j = 0; j < values.length; j++) {
       ranks[j] = this.getRank(values[j])
     }
 
@@ -103,9 +106,9 @@ export default class CardUtils {
   }
 
   getSuits(values) {
-    var suits = []
+    let suits = []
 
-    for (var j = 0; j < values.length; j++) {
+    for (let j = 0; j < values.length; j++) {
       suits[j] = this.getSuit(values[j])
     }
 
@@ -113,9 +116,9 @@ export default class CardUtils {
   }
 
   getValues(hand) {
-    var values = []
+    let values = []
 
-    for (var j = 0; j < hand.length; j++) {
+    for (let j = 0; j < hand.length; j++) {
       values[j] = hand[j].value
     }
 
@@ -123,10 +126,10 @@ export default class CardUtils {
   }
 
   simplifyRanks(ranks) {
-    var simpleRanks = []
+    let simpleRanks = []
     // strip out blank cards or 0's and convert face cards to 10's
 
-    for (var i = 0; i < ranks.length; i++) {
+    for (let i = 0; i < ranks.length; i++) {
       if (ranks[i] > 0) {
         simpleRanks.push(Math.min(ranks[i], 10))
       }
@@ -135,15 +138,15 @@ export default class CardUtils {
   }
 
   isInSequence(combo) {
-    for (var i = 1; i < combo.length; i++) {
+    for (let i = 1; i < combo.length; i++) {
       if (combo[i] !== combo[i - 1] + 1) return false
     }
     return true
   }
 
   scoreHand(hand, cutCard) {
-    var points = 0, cutSuit = 'B'
-    var values = this.getValues(hand)
+    let points = 0, cutSuit = 'B'
+    let values = this.getValues(hand)
 
     if (cutCard !== undefined) {
       values.push(cutCard.value)
@@ -152,12 +155,12 @@ export default class CardUtils {
 
     values.sort(this.compareCardValues)
 
-    var suits = this.getSuits(values)
-    var ranks = this.getRanks(values)
+    let suits = this.getSuits(values)
+    let ranks = this.getRanks(values)
 
     // score flush, count how many of the same suit, if 4, see if it excludes the cut card
-    var spades = 0, hearts = 0, clubs = 0, diamonds = 0
-    for (var i = 0; i < suits.length; i++) {
+    let spades = 0, hearts = 0, clubs = 0, diamonds = 0
+    for (let i = 0; i < suits.length; i++) {
       switch (suits[i]) {
         case 'S': spades++; break
         case 'H': hearts++; break
@@ -168,7 +171,7 @@ export default class CardUtils {
     }
 
     // Note: we are coding to expect that we score runs for hands of up to 5 cards max!
-    var flushPoints = 0
+    let flushPoints = 0
     if (spades === 4 && cutSuit !== 'S') flushPoints = 4
     if (spades === 5) flushPoints = 5
 
@@ -184,11 +187,11 @@ export default class CardUtils {
     points += flushPoints
 
     // get combinations of lengths 2 through hand length and use them to find runs, pairs, etc
-    var combos = this.getCombinations(ranks, 2, ranks.length)
+    let combos = this.getCombinations(ranks, 2, ranks.length)
 
     // score 15's
-    var fifteens = 0
-    for (i = 0; i < combos.length; i++) {
+    let fifteens = 0
+    for (let i = 0; i < combos.length; i++) {
       if (this.simplifyRanks(combos[i]).reduce((a, b) => a + b, 0) === 15) {
         ++fifteens
       }
@@ -196,8 +199,8 @@ export default class CardUtils {
     points += 2 * fifteens
 
     // score pairs, trips, quads
-    var pairs = 0, royalPairs = 0, doubleRoyalPairs = 0
-    for (i = 0; i < ranks.length; i++) {
+    let pairs = 0, royalPairs = 0, doubleRoyalPairs = 0
+    for (let i = 0; i < ranks.length; i++) {
       if (i < ranks.length - 1 && ranks[i] === ranks[i + 1]) {
         if (i < ranks.length - 2 && ranks[i + 1] === ranks[i + 2]) {
           if (i < ranks.length - 3 && ranks[i + 2] === ranks[i + 3]) {
@@ -218,9 +221,9 @@ export default class CardUtils {
     points += doubleRoyalPairs * 12
 
     // score runs, on combos which will include the input hand itself
-    var runs3 = 0, runs4 = 0, runs5 = 0
-    for (i = 0; i < combos.length; i++) {
-      var combo = combos[i]
+    let runs3 = 0, runs4 = 0, runs5 = 0
+    for (let i = 0; i < combos.length; i++) {
+      let combo = combos[i]
       switch (combo.length) {
         case 3: if (this.isInSequence(combo)) runs3++; break
         case 4: if (this.isInSequence(combo)) runs4++; break
@@ -240,10 +243,20 @@ export default class CardUtils {
       points += 3 * runs3
     }
 
-    return this.createScore(points, fifteens, flushPoints, runs3, runs4, runs5, pairs, royalPairs, doubleRoyalPairs, values)
+    return this.createScore(points, fifteens, flushPoints, runs3, runs4, runs5, pairs, royalPairs, doubleRoyalPairs)
   }
 
-  createScore(points, fifteens, flushPoints, runs3, runs4, runs5, pairs, royalPairs, doubleRoyalPairs, values) {
+  createHand( cards ){
+    let score = this.createScore(0,0,0,0,0,0,0,0,0)
+    return {
+      cards:cards,
+      score: score,
+      cutPoints:0,
+      playPoints:0
+    }
+  }
+
+  createScore(points, fifteens, flushPoints, runs3, runs4, runs5, pairs, royalPairs, doubleRoyalPairs ) {
     return {
       points: points,
       fifteens: fifteens,
@@ -253,23 +266,13 @@ export default class CardUtils {
       runs5: runs5,
       pairs: pairs,
       royalPairs: royalPairs,
-      doubleRoyalPairs: doubleRoyalPairs,
-      values: values
+      doubleRoyalPairs: doubleRoyalPairs
     }
   }
-
-  createHand(values) {
-    var score = this.createScore(0, 0, 0, 0, 0, 0, 0, 0, 0, values)
-    return {
-      score: score,
-      cutPoints: 0,
-      playPoints: 0
-    }
-  }
-
+ 
   // These are not really just card utilities, they are general purpose
   clone(obj) {
-    var copy;
+    let copy;
     // Handle the 3 simple types, and null or undefined
     if (null == obj || "object" != typeof obj) return obj;
 
@@ -281,7 +284,7 @@ export default class CardUtils {
 
     if (obj instanceof Array) {
       copy = []
-      for (var i = 0, len = obj.length; i < len; i++) {
+      for (let i = 0, len = obj.length; i < len; i++) {
         copy[i] = this.clone(obj[i]);
       }
       return copy
@@ -289,7 +292,7 @@ export default class CardUtils {
 
     if (obj instanceof Object) {
       copy = {};
-      for (var attr in obj) {
+      for (let attr in obj) {
         if (obj.hasOwnProperty(attr)) copy[attr] = this.clone(obj[attr]);
       }
       return copy
@@ -299,7 +302,7 @@ export default class CardUtils {
   }
 
   shuffle(a) {
-    var j, x, i
+    let j, x, i
     for (i = a.length - 1; i > 0; i--) {
       j = Math.floor(Math.random() * (i + 1))
       x = a[i]

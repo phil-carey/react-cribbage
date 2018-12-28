@@ -2,9 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-var GamePlay = require('./gameplay.js').default;
+let GamePlay = require('./gameplay.js').default;
 
-var game = new GamePlay();
+let game = new GamePlay();
 
 function Card(props) {
   return (
@@ -35,11 +35,11 @@ class Board extends React.Component {
   }
 
   handleCardClick(whoseHand, cardNdx) {
-    var changedHand, oppoNdx
-    var gameHand = this.state['gameHand']
-    var oppoHand = this.state['oppoHand']
-    var yourHand = this.state['yourHand']
-    var phase =  game.getPhase()
+    let changedHand, oppoNdx
+    let gameHand = this.state['gameHand']
+    let oppoHand = this.state['oppoHand']
+    let yourHand = this.state['yourHand']
+    let phase =  game.getPhase()
     //console.log( "HCC phase = %s", phase )
 
     switch (phase) {
@@ -47,22 +47,23 @@ class Board extends React.Component {
       case 'discarding':
         switch (whoseHand) {
           case 'yourHand':
-            changedHand = game.discardCard(this.state[whoseHand], cardNdx)
+            changedHand = game.discardCard( 'yourHand', cardNdx)
             game.advancePlay()
             this.setState({ yourHand: changedHand })
 
-            changedHand = game.opponentDiscards(this.state['oppoHand'])
+            changedHand = game.opponentDiscards('oppoHand')
             game.advancePlay()
             this.setState({ oppoHand: changedHand })
 
             if (game.getPhase() === 'playing') {
-              changedHand = game.flipCard(this.state['gameHand'], 0)
+              changedHand = game.flipCard( 'gameHand', 0)
               this.setState({ gameHand: changedHand })
               if (game.itsYourCrib() === true) {
                 // opponent plays first
-                oppoNdx = game.opponentChoosesCardToPlay(gameHand, oppoHand)
-                game.copyCard(oppoHand[oppoNdx], gameHand)
-                game.flipCard(gameHand, game.getLastPlayedIndex(gameHand))
+                oppoNdx = game.opponentChoosesCardToPlay()
+                changedHand = game.copyCard(oppoHand[oppoNdx], 'gameHand')
+                this.setState({ gameHand: changedHand })
+                game.flipCard('gameHand', game.getLastPlayedIndex('gameHand'))
               }
             }
             break
@@ -72,30 +73,29 @@ class Board extends React.Component {
         }
         break
 
-      case 'scoreCribHand':
+      case 'scoreCrib':
         break
 
       case 'playing':
         switch (whoseHand) {
           case 'yourHand':
-            // TODO: support opponent moving first
-            // in game play
             // copy the chosen card to the gamehand in the next open position
-            // show the played card in the gameHand
-            game.copyCard(yourHand[cardNdx], gameHand)
+            gameHand = game.copyCard(yourHand[cardNdx], 'gameHand')
 
             // mark copied card as played to make it hide when it renders
-            game.playCard(yourHand, cardNdx)
+            yourHand = game.playCard('yourHand', cardNdx)
             game.advancePlay()
 
             // check to see if opponent can play lt 31, if so, do so
             // have your opponent make their play
-            oppoNdx = game.opponentChoosesCardToPlay(gameHand, oppoHand)
-            game.copyCard(oppoHand[oppoNdx], gameHand)
-            game.flipCard(gameHand, game.getLastPlayedIndex(gameHand))
+            oppoNdx = game.opponentChoosesCardToPlay()
+            
+            gameHand = game.copyCard( oppoHand[oppoNdx], 'gameHand')
+
+            game.flipCard('gameHand', game.getLastPlayedIndex('gameHand'))
 
             // mark copied card as played to make it hide when it renders
-            game.playCard(oppoHand, oppoNdx)
+            oppoHand = game.playCard('oppoHand', oppoNdx)
             game.advancePlay()
 
             this.setState({ gameHand: gameHand })
@@ -125,14 +125,9 @@ class Board extends React.Component {
   }
 
   handleGameClick() {
-    var changedHand, score, points
+    let changedHand, score, points
 
-    // TODO: manage actions/changes in game state due do current phase of play
-    //yourScore = game.scorePlayHand(this.state['yourHand'], this.state['gameHand'][0])
-    //oppoScore = game.scorePlayHand(this.state['oppoHand'], this.state['gameHand'][0])
-    //cribScore = game.scoreCribHand(this.state['yourHand'], this.state['oppoHand'], this.state['gameHand'][0])
-
-    var phase = game.getPhase()
+    let phase = game.getPhase()
     //console.log( "HGC phase = %s", phase )
     switch (phase) {
       case 'gamePlayComplete':
@@ -141,18 +136,18 @@ class Board extends React.Component {
 
       case 'scoreNonDealerHand':
         // clear the gamehand
-        changedHand = game.clearHand(this.state['gameHand'], 1)
+        changedHand = game.clearHand('gameHand', 1)
         this.setState({ gameHand: changedHand })
 
         if (game.itsYourCrib() === false) {
-          changedHand = game.showHand(this.state['yourHand'])
+          changedHand = game.showHand('yourHand')
           this.setState({ yourHand: changedHand })
-          score = game.scorePlayHand(changedHand, this.state['gameHand'][0])
+          score = game.scorePlayHand('yourHand', this.state['gameHand'][0])
           game.setHandScore('yourHand', score)
         } else {
-          changedHand = game.showHand(this.state['oppoHand'])
+          changedHand = game.showHand('oppoHand')
           this.setState({ oppoHand: changedHand })
-          score = game.scorePlayHand(changedHand, this.state['gameHand'][0])
+          score = game.scorePlayHand('oppoHand', this.state['gameHand'][0])
           game.setHandScore('oppoHand', score)
         }
         game.advancePlay()
@@ -160,22 +155,22 @@ class Board extends React.Component {
 
       case 'scoreDealerHand':
         if (game.itsYourCrib() === true) {
-          changedHand = game.showHand(this.state['yourHand'])
+          changedHand = game.showHand('yourHand')
           this.setState({ yourHand: changedHand })
-          score = game.scorePlayHand(changedHand, this.state['gameHand'][0])
+          score = game.scorePlayHand('yourHand', this.state['gameHand'][0])
           game.setHandScore('yourHand', score)
         } else {
-          changedHand = game.showHand(this.state['oppoHand'])
+          changedHand = game.showHand('oppoHand')
           this.setState({ oppoHand: changedHand })
-          score = game.scorePlayHand(changedHand, this.state['gameHand'][0])
+          score = game.scorePlayHand('oppoHand', this.state['gameHand'][0])
           game.setHandScore('oppoHand', score)
         }
         game.advancePlay()
         break
 
-      case 'scoreCribHand':
+      case 'scoreCrib':
         // copy all discarded cards to the gamehand and show it
-        score = game.scoreCribHand(this.state['yourHand'], this.state['oppoHand'], this.state['gameHand'][0])
+        score = game.scoreCrib()
         if (game.itsYourCrib() === true) {
           points = game.getHandPoints('yourHand')
           game.setHandPoints('yourHand', score.points + points )
@@ -183,7 +178,7 @@ class Board extends React.Component {
           points = game.getHandPoints('oppoHand')
           game.setHandPoints('oppoHand', score.points + points  )
         }
-        changedHand = game.copyDiscardsToGameHand(this.state['oppoHand'], this.state['yourHand'], this.state['gameHand'])
+        changedHand = game.copyCribToGameHand()
         this.setState({ gameHand: changedHand })
         game.advancePlay()
         break
@@ -202,21 +197,15 @@ class Board extends React.Component {
 
   render() {
     // const means immutable, and allows for certain optimizations
-    // let has block scope, var has function scope
+    // let has block scope, let has function scope
     //const winner = game.calculateWinner(this.state);
     let instructions, currentTotal, yourPoints = 0, oppoPoints = 0
-    var status = 'this is what happened last...'
-    var phase = game.getPhase()
+    let status = 'this is what happened last...'
+    let phase = game.getPhase()
 
     instructions = game.getInstruction(phase)
     status = game.getWhatHappenedLast()
 
-    /*
-    render phase = scoreNonDealerHand instructions = Click to score your hand
-    render phase = scoreDealerHand instructions = Click to score your opponents hand
-    render phase = scoreCribHand instructions = Click to score score the crib
-    render phase = handCompleted instructions = Click to start a new hand    
-    */
     switch (phase) {
       case 'handCompleted':
         currentTotal = 0
@@ -224,12 +213,17 @@ class Board extends React.Component {
         yourPoints = game.getHandPoints('yourHand')
         break
 
-
-      default:
-        currentTotal = game.currentTotal(this.state['gameHand'])
+      case 'playing':
+        currentTotal = game.currentTotal()
         oppoPoints = game.getHandPoints('oppoHand')
         yourPoints = game.getHandPoints('yourHand')
         break
+
+      default:
+      currentTotal = 0
+      oppoPoints = game.getHandPoints('oppoHand')
+      yourPoints = game.getHandPoints('yourHand')
+      break
     }
 
     return (
@@ -295,19 +289,21 @@ class Board extends React.Component {
 
   renderCard(whoseHand, cardNdx) {
     // marginLeft is position within the div, width is width of the div
-    var card;
-    var offsets;
-    var width;
-    var marginLeft;
-    var marginTop;
-    var marginBottom;
-    var height = 156
-    var visibility = 'inherit'
+    let card;
+    let offsets;
+    let width;
+    let marginLeft;
+    let marginTop;
+    let marginBottom;
+    let height = 156
+    let visibility = 'inherit'
 
-    if (this.state[whoseHand][cardNdx].faceup === false) {
+    
+
+    if ( game.getFaceup( whoseHand, cardNdx ) === false ) {
       card = 'BB'
     } else {
-      card = this.state[whoseHand][cardNdx].value
+      card = game.getValue( whoseHand, cardNdx )
     }
 
     if (card === undefined) {
@@ -316,10 +312,11 @@ class Board extends React.Component {
     }
 
     offsets = game.calculateCardoffsets(card)
-    var bg = "url( 'card-deck.png') " + offsets.left + "px " + offsets.top + "px"
+    let bg = "url( 'card-deck.png') " + offsets.left + "px " + offsets.top + "px"
 
     switch (whoseHand) {
       case 'gameHand':
+        //console.log( "renderCard whoseHand = %s cardNdx=%d card = %s", whoseHand, cardNdx, card)
         marginLeft = (cardNdx === 1) ? 50 : -1
         if (game.itsYourCrib()) {
           marginTop = (cardNdx % 2) ? 0 : 10
@@ -333,7 +330,7 @@ class Board extends React.Component {
           width = 100
         } else {
           // partial cards for all that overlap ( all but the last one )
-          width = (cardNdx === game.getLastPlayedIndex(this.state[whoseHand])) ? 100 : 65;
+          width = (cardNdx === game.getLastPlayedIndex( whoseHand ) ) ? 100 : 65;
         }
         if (card === 'BB' && cardNdx > 0) {
           visibility = 'hidden'
@@ -342,9 +339,9 @@ class Board extends React.Component {
 
       case 'oppoHand':
       case 'yourHand':
-        width = (cardNdx === game.getLastUnplayedIndex(this.state[whoseHand])) ? 100 : 65;
+        width = (cardNdx === game.getLastUnplayedIndex( whoseHand )) ? 100 : 65;
         marginLeft = (cardNdx === 0) ? 50 : -1
-        if (this.state[whoseHand][cardNdx].played === true) {
+        if ( game.getPlayed(whoseHand, cardNdx) === true) {
           width = 0
           visibility = 'hidden'
         }
@@ -354,7 +351,7 @@ class Board extends React.Component {
         break;
     }
 
-    var styles = {
+    let styles = {
       card: {
         float: 'left',
         margin: 0,
