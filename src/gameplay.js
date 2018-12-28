@@ -3,9 +3,7 @@ let utils = new CardUtils();
 
 export default class GamePlay {
   constructor() {
-    this.state = {
-      moveNdx: 0
-    };
+    this.state = { };
   }
 
   getPlayed(whichHand, cardNdx) {
@@ -20,14 +18,14 @@ export default class GamePlay {
     return this.state.hands[whichHand].cards[cardNdx].value
   }
 
-  scoreCrib() {
+  getCribScore() {
     let cutCard = this.state.hands['gameHand'].cards[0]
     let cribCards = this.state.hands['cribHand'].cards
     cribCards.sort(utils.compareCards)
     return utils.scoreHand(cribCards, cutCard)
   }
 
-  scorePlayHand(whichHand, cutCard) {
+  getHandScore(whichHand, cutCard) {
     let hand = this.state.hands[whichHand].cards
     // create a hand with only the non-discarded cards in it, and score that
     let playHand = []
@@ -46,21 +44,8 @@ export default class GamePlay {
     return this.state.hands[whichHand].score.points
   }
 
-  setHandPoints(whichHand, points) {
-    // TODO: returns the total of cutPoints+playPoints+handScore.points
-    this.state.hands[whichHand].score.points = points
-  }
-
   getWhatHappenedLast() {
     return this.whatHappenedLast
-  }
-
-  advancePlay() {
-    ++this.state.moveNdx
-  }
-
-  setHandScore(whichHand, score) {
-    this.state.hands[whichHand].score = score
   }
 
   getLastPlayedIndex(whichHand) {
@@ -82,27 +67,7 @@ export default class GamePlay {
     return lastNdx
   }
 
-  copyCard(srcCard, whichHand) {
-    // copy the provided card to the first unplayed spot in the desthand
-    let destHand = this.state.hands[whichHand].cards
-
-    let changedCard
-    changedCard = utils.clone(srcCard)
-    changedCard.played = true
-
-    let freeNdx = destHand.length - 1
-    for (let i = 0; i < destHand.length; i++) {
-      if (destHand[i].played === false) {
-        freeNdx = i
-        break
-      }
-    }
-
-    destHand[freeNdx] = changedCard
-    return this.state.hands[whichHand]
-  }
-
-  currentTotal() {
+  getCurrentTotal() {
     let gameHand = this.state.hands['gameHand'].cards
 
     let values = utils.getValues(gameHand.slice(1, gameHand.length))
@@ -120,42 +85,8 @@ export default class GamePlay {
     return result
   }
 
-  opponentChoosesCardToPlay() {
-    // TODO: add intelligence regarding which card to play
-    return this.getLastPlayedIndex('oppoHand') + 1
-  }
-
-  opponentDiscards(whichHand) {
-    let hand = this.state.hands[whichHand].cards
-    // TODO: add intelligent discarding for opponent
-    for (let i = 0; i < hand.length; i++) {
-      if (hand[i].discarded === false) {
-        this.discardCard(whichHand, i)
-        break
-      }
-    }
-    return hand
-  }
-
-  calculateWinner(state) {
+  getWinner(state) {
     return null
-  }
-
-  copyCribToGameHand() {
-    let gameHand = this.state.hands['gameHand'].cards
-    let cribHand = this.state.hands['cribHand'].cards
-
-    let i, card
-
-    for (i = 0; i < cribHand.length; i++) {
-      card = utils.clone(cribHand[i])
-      card.discarded = false
-      card.played = true
-      card.faceup = true
-      this.copyCard( card, 'gameHand')
-    }
-
-    return gameHand
   }
 
   getPhase() {
@@ -188,7 +119,7 @@ export default class GamePlay {
 
       case 15:
         // all cards have been played, calculate score for the crib hand
-        phase = 'scoreCrib'
+        phase = 'getCribScore'
         break
 
       default:
@@ -208,7 +139,7 @@ export default class GamePlay {
         break
 
       case 'scoreNonDealerHand':
-        if (this.itsYourCrib() === false) {
+        if (this.getItsYourCrib() === false) {
           instruction = 'Click to score your hand'
         } else {
           instruction = 'Click to score your opponents hand'
@@ -216,14 +147,14 @@ export default class GamePlay {
         break
 
       case 'scoreDealerHand':
-        if (this.itsYourCrib() === false) {
+        if (this.getItsYourCrib() === false) {
           instruction = 'Click to score your opponents hand'
         } else {
           instruction = 'Click to score your hand'
         }
         break
 
-      case 'scoreCrib':
+      case 'getCribScore':
         instruction = 'Click to score score the crib'
         break
 
@@ -245,65 +176,7 @@ export default class GamePlay {
     return instruction
   }
 
-  clearHand(whichHand, startFrom) {
-    let hand = this.state.hands[whichHand].cards
-    for (let i = startFrom; i < hand.length; i++) {
-      hand[i] = utils.createCard('BB', false, false)
-    }
-    return hand
-  }
-
-  showHand(whichHand) {
-    let hand = this.state.hands[whichHand].cards
-
-    for (let i = 0; i < hand.length; i++) {
-      if (hand[i].discarded === false) {
-        hand[i].played = false
-      }
-    }
-    return hand
-  }
-
-  playCard(whichHand, cardNdx) {
-    let hand = this.state.hands[whichHand].cards
-    let changedCard
-    changedCard = utils.clone(hand[cardNdx])
-    changedCard.played = true
-    changedCard.faceup = true
-    hand[cardNdx] = changedCard
-
-    return hand
-  }
-
-  discardCard(whichHand, cardNdx) {
-    let changedCard
-    let hand = this.state.hands[whichHand].cards
-    let cribCards = this.state.hands['cribHand'].cards
-
-    changedCard = utils.clone(hand[cardNdx])
-    cribCards[cribCards.length] = changedCard
-
-    //hand.splice( cardNdx, 1) // remove the discarded card from the indicated hand
-    changedCard.faceup = false
-    changedCard.played = true
-    changedCard.discarded = true
-
-    hand[cardNdx] = changedCard
-    return hand
-  }
-
-  flipCard(whichHand, cardNdx) {
-    let changedCard
-    let hand = this.state.hands[whichHand].cards
-
-    changedCard = utils.clone(hand[cardNdx])
-    changedCard.faceup = !changedCard.faceup
-
-    hand[cardNdx] = changedCard
-    return hand
-  }
-
-  calculateCardoffsets(card) {
+  getCardoffsets(card) {
     // CDHS, A123...K 153x98
     let col = card.slice(0, 1)
     let row = card.slice(1, 2)
@@ -332,11 +205,136 @@ export default class GamePlay {
     return result
   }
 
-  itsYourCrib() {
+  getItsYourCrib() {
     return this.state.yourDeal
   }
 
-  newGame() {
+  setHandPoints(whichHand, points) {
+    // TODO: returns the total of cutPoints+playPoints+handScore.points
+    this.state.hands[whichHand].score.points = points
+  }
+
+  setHandScore(whichHand, score) {
+    this.state.hands[whichHand].score = score
+  }
+
+  doAdvancePlay() {
+    ++this.state.moveNdx
+  }
+  
+  doCopyCard(srcCard, whichHand) {
+    // copy the provided card to the first unplayed spot in the desthand
+    let destHand = this.state.hands[whichHand].cards
+
+    let changedCard
+    changedCard = utils.clone(srcCard)
+    changedCard.played = true
+
+    let freeNdx = destHand.length - 1
+    for (let i = 0; i < destHand.length; i++) {
+      if (destHand[i].played === false) {
+        freeNdx = i
+        break
+      }
+    }
+
+    destHand[freeNdx] = changedCard
+    return this.state.hands[whichHand]
+  }
+
+  doOpponentPlayCard() {
+    // TODO: add intelligence regarding which card to play
+    return this.getLastPlayedIndex('oppoHand') + 1
+  }
+
+  doOpponentDiscard(whichHand) {
+    // TODO: add intelligent discarding for opponent
+    let hand = this.state.hands[whichHand].cards
+    for (let i = 0; i < hand.length; i++) {
+      if (hand[i].discarded === false) {
+        this.doDiscardCard(whichHand, i)
+        break
+      }
+    }
+    return hand
+  }
+
+  doCopyCribToGameHand() {
+    let gameHand = this.state.hands['gameHand'].cards
+    let cribHand = this.state.hands['cribHand'].cards
+
+    let i, card
+
+    for (i = 0; i < cribHand.length; i++) {
+      card = utils.clone(cribHand[i])
+      card.discarded = false
+      card.played = true
+      card.faceup = true
+      this.doCopyCard( card, 'gameHand')
+    }
+
+    return gameHand
+  }
+
+  doClearHand(whichHand, startFrom) {
+    let hand = this.state.hands[whichHand].cards
+    for (let i = startFrom; i < hand.length; i++) {
+      hand[i] = utils.createCard('BB', false, false)
+    }
+    return hand
+  }
+
+  doShowHand(whichHand) {
+    let hand = this.state.hands[whichHand].cards
+
+    for (let i = 0; i < hand.length; i++) {
+      if (hand[i].discarded === false) {
+        hand[i].played = false
+      }
+    }
+    return hand
+  }
+
+  doPlayCard(whichHand, cardNdx) {
+    let hand = this.state.hands[whichHand].cards
+    let changedCard
+    changedCard = utils.clone(hand[cardNdx])
+    changedCard.played = true
+    changedCard.faceup = true
+    hand[cardNdx] = changedCard
+
+    return hand
+  }
+
+  doDiscardCard(whichHand, cardNdx) {
+    let changedCard
+    let hand = this.state.hands[whichHand].cards
+    let cribCards = this.state.hands['cribHand'].cards
+
+    changedCard = utils.clone(hand[cardNdx])
+    cribCards[cribCards.length] = changedCard
+
+    //hand.splice( cardNdx, 1) // remove the discarded card from the indicated hand
+    changedCard.faceup = false
+    changedCard.played = true
+    changedCard.discarded = true
+
+    hand[cardNdx] = changedCard
+    return hand
+  }
+
+  doFlipCard(whichHand, cardNdx) {
+    let changedCard
+    let hand = this.state.hands[whichHand].cards
+
+    changedCard = utils.clone(hand[cardNdx])
+    changedCard.faceup = !changedCard.faceup
+
+    hand[cardNdx] = changedCard
+    return hand
+  }
+
+  doStartNewGame() {
     let deck, i
     let oppoHand, yourHand
     let gameHand = []
@@ -369,7 +367,7 @@ export default class GamePlay {
     this.state.hands['cribHand'] = utils.createHand(cribHand)
     this.state.hands['gameHand'] = utils.createHand(gameHand)
 
-    //console.log( "newgame state = ", this.state )
+    //console.log( "doStartNewGame state = ", this.state )
 
     return {
       oppoHand: this.state.hands['oppoHand'].cards,
