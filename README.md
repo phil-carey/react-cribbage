@@ -1,4 +1,4 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), the goal was to learn a little bit about react, and to create a complete client side javascript implementation of the game of cribbage, at the same time building a foundation which might be used to connect to server side game play intelligence using approaches other than hard coded rules based on statistics and probabilities of the game, including some which could adapt to strategies or weaknesses in the human opponent in the game.
 
 ## Available Scripts
 
